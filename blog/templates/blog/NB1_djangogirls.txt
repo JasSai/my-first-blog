@@ -1,0 +1,276 @@
+########################################
+========================================
+@Introduction
+
+We are going to add a new page.
+The page will be similar to our existing post_list.
+But we wont get the data dynamically server-side.
+We are going to get the data dynamically client-side instead.
+We are going to use jQuery's AJAX.
+This is also known as XMLHttpRequest or XHR.
+
+AJAX is used a lot in Single Page Applications (SPA).
+The advantage is that the SPA can get whatever it needs whenever it needs it.
+And it can do this without reloading the page, just by using AJAX calls.
+Traditionally the server would send all the data down that the user could possibly need.
+If any additional data was needed the whole page would be resent.
+
+A disadvantage with SPA is that the initial page load can be big.
+This is offset by the using Content Delivery Networks (CDNs) for the libriaries.
+It is most likely that the browser has the libraries already cached then.
+Especially as so many pages use libraries like jQuery.
+
+Another disadvantage with SPA is security.
+Do you trust the JavaScript in the client?
+Can it be altered?
+Can the URLs that AJAX calls be used in unexpected ways?
+
+========================================
+@Instructions
+
+Prerequisites: You have completed the Django Girls Tutorial (extras not necessary).
+
+First we create the "page" json_all_posts that AJAX will use to retrieve the data from.
+Then we test this.
+Then we create the page spa_post_list that will display all the blogs in an SPA style (using AJAX).
+The steps are as follows, they are detailed in the following sections.
+
+@11 create a git branch to revert back to, if needed
+@12 modify base template base.html
+@13 modify urls.py adding route for json_all_posts
+@14 create a view to return blog posts as json feed
+
+@22 create template spa_post_list.html
+@23 modify views.py adding spa_post_list
+@24 modify urls.py adding route for spa_post_list
+@25 test it
+@26 deploy
+
+@99 additional notes
+
+NOTE: all work is being done on the local development host
+
+
+========================================
+@11 create a git branch to revert back to, if needed
+
+...get git into a tidy state
+git status
+git add --all .
+git commit -m "all done"
+git push
+
+...create a new branch
+git branch pre-ajax
+
+...confirm switching between branches
+echo test new file > testnewfile.txt
+ls #testnewfile.txt exists
+git status
+git add --all .
+git commit -m "starting-ajax"
+git push
+
+git checkout pre-ajax
+ls #testnewfile.txt is not there
+
+git checkout master
+ls #testnewfile.txt exists again
+
+
+========================================
+@12 modify base template base.html
+
+...context: new page = url + [model +] [form +] view + *[base template +]* template
+...edit blog/templates/blog/base.html
+
+...add js libraries to <head>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/js-cookie/2.1.4/js.cookie.js"></script>
+
+...add functions to setup ajax headers to <head>
+	</script>
+	// a few things to setup ajax calls
+	var csrftoken = Cookies.get('csrftoken');
+	function csrfSafeMethod(method) {
+	    // these HTTP methods do not require CSRF protection
+	    return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+	}
+	jQuery.ajaxSetup({
+	    // set token where needed (unsafe methods)
+	    // but dont leak token (dont set when posting externally)
+	    beforeSend: function(xhr, settings) {
+	        if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+	            xhr.setRequestHeader("X-CSRFToken", csrftoken);
+	        }
+	    }
+	});
+	</script>
+
+...add a block js-head to <head>
+	{% block js-head %}{% endblock %}
+
+...NB we already ahave a content block in <body>
+
+
+========================================
+@13 modify urls.py adding route for json_all_posts
+
+...context: new page = *url* + [model +] [form +] view + [base template +] template
+...edit blog/urls.py
+
+    url(r'^json_all_posts$', views.json_all_posts, name='json_all_posts'),
+
+
+========================================
+@14 create a view to return blog posts as json feed
+
+...context: new page = url + [model +] [form +] *view* + [base template +] template
+
+...edit blog/views.py adding imports
+from django.http import JsonResponse
+from django.core import serializers
+
+...edit blog/views.py adding a new view function
+def json_all_posts(request):
+    posts = Post.objects.order_by('published_date')
+    data = serializers.serialize('json', posts)
+    return JsonResponse(data, safe=False)
+
+...NOTE: had to call serializer explicitly as our __str__ in models.py was insufficient ("unJSONy")
+
+...test by browsing to
+127.0.0.1:8000/json_all_posts
+
+...eg output
+"[{\"model\": \"blog.post\", \"pk\": 4, \"fields\": {\"author\": 1, \"title\": \"Sample title2\", \"text\": \"Test2\", \"created_date\": \"2017-05-11T04:01:19.375Z\", \"published_date\": \"2017-05-11T04:01:19.375Z\"}}, {\"model\": \"blog.post\", \"pk\": 3, \"fields\": {\"author\": 1, \"title\": \"Sample title\", \"text\": \"Test\", \"created_date\": \"2017-05-11T03:50:39.981Z\", \"published_date\": \"2017-05-11T04:05:19.916Z\"}}, {\"model\": \"blog.post\", \"pk\": 2, \"fields\": {\"author\": 1, \"title\": \"blog one\", \"text\": \"blog one of us blog one of us blog one of us\", \"created_date\": \"2017-05-11T03:23:45Z\", \"published_date\": \"2017-05-11T04:06:15Z\"}}, {\"model\": \"blog.post\", \"pk\": 1, \"fields\": {\"author\": 1, \"title\": \"blog zero\", \"text\": \"Is <b> zero </b> nothing?\", \"created_date\": \"2017-05-10T05:56:05Z\", \"published_date\": \"2017-05-11T04:06:27Z\"}}, {\"model\": \"blog.post\", \"pk\": 5, \"fields\": {\"author\": 1, \"title\": \"new post using new_post\", \"text\": \"yeah, so it is\", \"created_date\": \"2017-05-11T11:45:12.115Z\", \"published_date\": \"2017-05-11T11:45:12.118Z\"}}, {\"model\": \"blog.post\", \"pk\": 6, \"fields\": {\"author\": 1, \"title\": \"new post using new_post\", \"text\": \"yeah, so it is\", \"created_date\": \"2017-05-11T11:46:33.262Z\", \"published_date\": \"2017-05-11T11:46:33.279Z\"}}, {\"model\": \"blog.post\", \"pk\": 7, \"fields\": {\"author\": 2, \"title\": \"the end is in sight\", \"text\": \"nearly there\", \"created_date\": \"2017-05-24T04:41:59.638Z\", \"published_date\": \"2017-05-24T04:41:59.641Z\"}}, {\"model\": \"blog.post\", \"pk\": 8, \"fields\": {\"author\": 2, \"title\": \"hello\", \"text\": \"hiya all\", \"created_date\": \"2017-05-27T00:01:02.927Z\", \"published_date\": \"2017-05-27T00:01:02.978Z\"}}]"
+
+
+========================================
+@22 create template spa_post_list.html
+
+...context: new page = url + [model +] [form +] view + [base template +] *template*
+
+...edit blog/templates/blog/spa_post_list.html
+...the entire content follows:
+
+{% extends 'blog/base.html' %}
+
+{% block js-head %}
+<script>
+$.noConflict();
+function render_post(item, index){
+  jQuery("#all_posts").append(
+    "<br><h1>" +
+    item.fields.title +
+    "</h1><br><p>" +
+    item.fields.text +
+    "</p>"
+  );
+}
+jQuery(document).ready(function(){
+  alert("Document Ready.");
+  jQuery("#btn1").click(function(){
+    alert("You pressed the button.");
+    jQuery.ajax({
+      type: 'GET',
+      url: '{% url "json_all_posts" %}',
+      dataType: 'json',
+      success: function (data) {
+        var obj = JSON.parse(data);
+        obj.forEach(render_post);
+      }
+    })
+  });
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<p>Press THE BUTTON to get JSON Content via XMLHttpRequest ie XHR ie AJAX ala SPA.</p>
+<div id="all_posts"></div>
+<button id="btn1">THE BUTTON</button>
+{% endblock %}
+
+
+========================================
+@23 modify views.py adding spa_post_list
+
+...context: new page = url + [model +] [form +] *view* + [base template +] template
+...edit blog/views.py adding a new view function
+
+def spa_post_list(request):
+    return render(request, 'blog/spa_post_list.html', {})
+
+
+========================================
+@24 modify urls.py adding route for spa_post_list
+
+...context: new page = *url* + [model +] [form +] view + [base template +] template
+...edit blog/urls.py adding a new url route
+
+    url(r'^spa_post_list$', views.spa_post_list, name='spa_post_list'),
+
+
+========================================
+@25 test it
+
+...browse to
+<yourname>.pythonanywhere.com/spa_post_list
+
+...use F12 to debug source
+...notice no blog posts are there
+...they did not come with the the page source
+...the page gets them dynamically
+
+
+========================================
+@26 deploy
+
+...on local dev host
+git status
+git add --all .
+git commit -m "all done"
+git push
+
+...on pythonanywhere
+git pull
+
+
+========================================
+@99 additional notes
+
+...a good reference
+...note how using a class in views.py
+https://simpleisbetterthancomplex.com/tutorial/2016/08/29/how-to-work-with-ajax-request-with-django.html
+
+...CSRF
+...extra code in blog/base.html not needed until do ajax post
+...reference
+https://docs.djangoproject.com/en/1.11/ref/csrf/#django.views.decorators.csrf.ensure_csrf_cookie
+"ensure_csrf_cookie(view)
+This decorator forces a view to send the CSRF cookie."
+
+...JSON / HTML
+...so can use same view
+...returning different formats
+...depending how called (can tell by headers)
+...https://stackoverflow.com/questions/4740569/ajax-views-with-django
+...see also django-piston for returning views as different formats
+
+from django.http import HttpResponse
+from django.core import serializers
+from django.shortcuts import render_to_response
+from your_app.models import ExampleModel
+
+def xhr_test(request, format):
+    obj = ExampleModel.objects.all()
+    if request.is_ajax():
+        data = serializers.serialize('json', obj)
+        return HttpResponse(data,'json')
+    else:
+        return render_to_response('template.html', {'obj':obj}, context=...)
+
+
+========================================
+*end*
