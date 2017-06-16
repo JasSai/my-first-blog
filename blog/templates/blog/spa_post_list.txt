@@ -33,5 +33,6 @@ jQuery(document).ready(function(){
 {% block content %}
 <p>Press THE BUTTON to get JSON Content via XMLHttpRequest ie XHR ie AJAX ala SPA.</p>
 <div id="all_posts"></div>
-<button id="btn1">THE BUTTON</button>
+<button id="btn1">THE BUTTON
+</button>
 {% endblock %}

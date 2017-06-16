@@ -47,4 +47,4 @@ def json_all_posts(request):
     return JsonResponse(data, safe=False)
 
 def spa_post_list(request):
-    return render(request, 'blog/spa_post_list.html', {})        
+    return render(request, 'templates/blog/spa_post_list.html', {})
